@@ -1,4 +1,5 @@
-use std::env;
+use std::{env, sync::Arc};
+use dashmap::DashMap;
 use dotenvy::dotenv;
 use asterisk_ari::{apis::{bridges::{models::BridgeType, params::AddChannelRequest}, params::Direction}, AriClient, Config, Result};
 
@@ -12,7 +13,11 @@ async fn main() -> Result<()> {
     let config = Config::new(asterisk_url, asterisk_user, asterisk_password);
     let mut client = AriClient::with_config(config);
 
+    let echo_channels: Arc<DashMap<String, String>> = Arc::from(DashMap::new());
+
+    let echo_channels_start = echo_channels.clone();
     client.on_stasis_start(move | client, event | {
+        let echo_channels = echo_channels_start.clone();
         async move {
             if event.data.channel.name.starts_with("UnicastRTP") {
                 return Ok(());
@@ -25,6 +30,8 @@ async fn main() -> Result<()> {
             let external_media_params = asterisk_ari::apis::channels::params::ExternalMediaRequest::new("my_app", "77.110.104.14:5004", "ulaw").with_direction(Direction::Both);
             let external_media =  client.channels().external_media(external_media_params).await.unwrap();
 
+            echo_channels.insert(event.data.channel.id.clone(), external_media.id.clone());
+
             let bridge_params = asterisk_ari::apis::bridges::params::CreateRequest::new().with_type(BridgeType::Mixing);
             let bridge = client.bridges().create(bridge_params).await.unwrap();
 
@@ -36,6 +43,18 @@ async fn main() -> Result<()> {
         }
     });
 
+    let echo_channels_end = echo_channels.clone();
+    client.on_stasis_end(move | client, event | {
+        let echo_channels = echo_channels_end.clone();
+        async move {
+            if let Some(channel) = echo_channels.get(&event.data.channel.id) {
+                let delete_request = asterisk_ari::apis::channels::params::DeleteRequest::new(channel.clone());
+                client.channels().delete(delete_request).await.unwrap();
+            }
+
+            Ok(())
+        }
+    });
 
     let mut _client = client.clone();
     let handle = tokio::spawn(async move {
