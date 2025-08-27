@@ -1,0 +1,13 @@
+[package]
+name = "echo-ari"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+asterisk-ari = "0.3.0"
+dashmap = "6.1.0"
+dotenvy = "0.15.7"
+rand = "0.9.2"
+rnd = "0.1.1"
+structopt = "0.3.26"
+tokio = { version = "1.47.1", features = ["full"] }
