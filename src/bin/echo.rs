@@ -72,7 +72,6 @@ async fn handle_packet(buf: RTPBuffer, from: SocketAddr, ssrc_to_buffers: SsrcTo
                 buffer.insert(packet.seqno, packet);
             },
             None => {
-                println!("new ssrc!");
                 need_interval = true;
                 ssrc_to_buffers.insert(ssrc, Arc::new(Mutex::new(BTreeMap::from([(packet.seqno, packet)]))));
             }
@@ -128,7 +127,6 @@ fn percentile_u128(data: &[u128], p: f64) -> Option<f64> {
     }
     let p = p.clamp(0.0, 1.0);
 
-    // Сортируем копию
     let mut v = data.to_vec();
     v.sort_unstable();
 
@@ -146,6 +144,6 @@ fn percentile_u128(data: &[u128], p: f64) -> Option<f64> {
         let x1 = v[i + 1] as f64;
         Some(x0 + frac * (x1 - x0))
     } else {
-        Some(v[i] as f64) // для p == 1.0
+        Some(v[i] as f64)
     }
 }
