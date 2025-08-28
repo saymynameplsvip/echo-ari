@@ -45,6 +45,7 @@ fn main() -> std::io::Result<()> {
             let stats_clone = statistics.clone();
 
             tokio::spawn(async move {
+                println!("spawning!");
                 handle_packet(buf, addr, ssrc_to_buffers, socket_clone, stats_clone).await;
             });
         }
@@ -55,7 +56,7 @@ async fn handle_packet(buf: RTPBuffer, from: SocketAddr, ssrc_to_buffers: SsrcTo
         let version = &buf[0] >> 6;
          
         if version != 2 {
-            println!("{}", std::str::from_utf8(&buf).unwrap())
+            panic!();
         }
         
         let ssrc = u32::from_be_bytes([buf[8], buf[9], buf[10], buf[11]]);
@@ -83,7 +84,6 @@ async fn handle_packet(buf: RTPBuffer, from: SocketAddr, ssrc_to_buffers: SsrcTo
                 let mut passes_ms = 0;
                 loop {
                     interval.tick().await;
-                    println!("{}", ssrc);
                     let buffer_arc = ssrc_to_buffers.get(&ssrc).unwrap();
                     let mut buffer = buffer_arc.lock().await;
                     if let Some((_, packet)) = buffer.pop_first() {
@@ -113,7 +113,7 @@ async fn handle_packet(buf: RTPBuffer, from: SocketAddr, ssrc_to_buffers: SsrcTo
                         stats.success_packets = 0;
                         stats.elapseds = vec![];
 
-                        ssrc_to_buffers.remove(&ssrc);
+                        
                         break;
                     }
                 }
